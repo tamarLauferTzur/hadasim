@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Sign Up</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="login-box">
+        <h1>Sign Up</h1>
+        <form id="register-form">
+            <label>
+                ID
+                <input type="number" id="user_id" required>
+            </label>
+            <label>
+                First and Last Name
+                <input type="text" id="name" required>
+            </label>
+            <label>
+                Class
+                <input type="text" id="class_name" required>
+            </label>
+            <label>
+                Role
+                <select id="role" required>
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                </select>
+            </label>
+            <label>
+                Password
+                <input type="password" id="password" required>
+            </label>
+            <button type="submit">Sign Up</button>
+        </form>
+        <p id="error" class="error"></p>
+        <p class="auth-link"><a href="index.html">Back to login</a></p>
+    </main>
+
+    <script>
+        const form = document.getElementById("register-form");
+        const errorBox = document.getElementById("error");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            errorBox.textContent = "";
+
+            const user_id = Number(document.getElementById("user_id").value);
+            const name = document.getElementById("name").value;
+            const class_name = document.getElementById("class_name").value;
+            const role = document.getElementById("role").value;
+            const password = document.getElementById("password").value;
+
+            const response = await fetch("/register", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({user_id, name, class_name, role, password}),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                errorBox.textContent = data.detail || "Sign up failed";
+                return;
+            }
+
+            window.location.href = "index.html";
+        });
+    </script>
+</body>
+</html>

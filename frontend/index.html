@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="login-box">
+        <h1>Teacher Login</h1>
+        <form id="login-form">
+            <label>
+                ID
+                <input type="number" id="user_id" required>
+            </label>
+            <label>
+                Password
+                <input type="password" id="password" required>
+            </label>
+            <button type="submit">Login</button>
+        </form>
+        <p id="error" class="error"></p>
+        <p class="auth-link">No account? <a href="register.html">Sign up</a></p>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        const form = document.getElementById("login-form");
+        const errorBox = document.getElementById("error");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            errorBox.textContent = "";
+
+            const user_id = Number(document.getElementById("user_id").value);
+            const password = document.getElementById("password").value;
+
+            const response = await fetch("/login", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({user_id, password}),
+            });
+
+            if (!response.ok) {
+                errorBox.textContent = "Wrong ID or password";
+                return;
+            }
+
+            const data = await response.json();
+            localStorage.setItem("token", data.token);
+            window.location.href = "dashboard.html";
+        });
+    </script>
+</body>
+</html>

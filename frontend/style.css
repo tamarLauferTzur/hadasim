@@ -1,0 +1,223 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    color: #222;
+}
+
+.login-box {
+    max-width: 320px;
+    margin: 80px auto;
+    padding: 24px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.login-box h1 {
+    margin-top: 0;
+    font-size: 20px;
+}
+
+.login-box label {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.login-box input {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.login-box button {
+    width: 100%;
+    padding: 10px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.login-box button:hover {
+    background: #1d4ed8;
+}
+
+.error {
+    color: #b91c1c;
+    margin: 8px 0 0 0;
+    font-size: 14px;
+}
+
+.login-box select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+}
+
+.auth-link {
+    margin: 12px 0 0 0;
+    font-size: 14px;
+    text-align: center;
+}
+
+.auth-link a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 18px;
+}
+
+header button {
+    padding: 6px 14px;
+    background: #e5e7eb;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.scope-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #374151;
+}
+
+.scope-label select {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    font-size: 14px;
+}
+
+.dashboard {
+    display: flex;
+    height: calc(100vh - 53px);
+}
+
+#student-list {
+    width: 240px;
+    padding: 12px;
+    border-right: 1px solid #ddd;
+    overflow-y: auto;
+}
+
+.student-item {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.student-item:hover {
+    background: #f3f4f6;
+}
+
+.student-item.far {
+    background: #fef2f2;
+    border-left: 3px solid #dc2626;
+    color: #991b1b;
+}
+
+.student-item.far:hover {
+    background: #fee2e2;
+}
+
+.student-item.self {
+    background: #f0fdf4;
+    border-left: 3px solid #16a34a;
+    color: #14532d;
+    font-weight: 600;
+}
+
+.student-item.self:hover {
+    background: #dcfce7;
+}
+
+.user-marker-pin {
+    background: transparent;
+    border: none;
+}
+
+.user-marker-pin svg {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.user-marker-pin.far svg {
+    filter: drop-shadow(0 0 4px #dc2626) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+    animation: far-pulse 1.4s ease-in-out infinite;
+}
+
+.user-marker-pin.self svg {
+    filter: drop-shadow(0 0 5px #16a34a) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+
+@keyframes far-pulse {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+.status-pill {
+    font-size: 13px;
+    padding: 4px 10px;
+    background: #f3f4f6;
+    color: #374151;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+}
+
+.status-pill.active {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+    font-weight: 600;
+}
+
+.scope-label input[type="number"] {
+    width: 80px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.hint {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+#map {
+    flex: 1;
+}

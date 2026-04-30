@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Students Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Students</h1>
+        <div class="header-controls">
+            <label class="scope-label">
+                Show
+                <select id="scope">
+                    <option value="my_class">My class</option>
+                    <option value="all_students">All students</option>
+                    <option value="all_teachers">All teachers</option>
+                </select>
+            </label>
+            <label class="scope-label">
+                Mark above (km)
+                <input type="number" id="threshold" min="0" step="0.5" placeholder="any">
+            </label>
+            <span id="status" class="status-pill"></span>
+            <button id="logout">Logout</button>
+        </div>
+    </header>
+
+    <div class="dashboard">
+        <aside id="student-list">
+            <p class="hint">Loading...</p>
+        </aside>
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+    <script>
+        const map = L.map("map").setView([31.78, 35.21], 8);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap contributors",
+        }).addTo(map);
+
+        const list = document.getElementById("student-list");
+        const scopeSelect = document.getElementById("scope");
+        const thresholdInput = document.getElementById("threshold");
+        const statusBox = document.getElementById("status");
+        let markers = {};
+        let selfMarker = null;
+        let currentUsers = [];
+        let teacherUser = null;
+
+        const emptyMessages = {
+            my_class: "No students in your class.",
+            all_students: "No students found.",
+            all_teachers: "No teachers found.",
+        };
+
+        document.getElementById("logout").addEventListener("click", () => {
+            localStorage.removeItem("token");
+            window.location.href = "index.html";
+        });
+
+        function clearMarkers() {
+            for (const id in markers) {
+                map.removeLayer(markers[id]);
+            }
+            markers = {};
+            if (selfMarker) {
+                map.removeLayer(selfMarker);
+                selfMarker = null;
+            }
+        }
+
+        function haversineKm(lat1, lng1, lat2, lng2) {
+            const R = 6371;
+            const toRad = (d) => d * Math.PI / 180;
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat / 2) ** 2
+                + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+            return 2 * R * Math.asin(Math.sqrt(a));
+        }
+
+        function makeIcon(variant) {
+            const color = variant === "self" ? "#16a34a"
+                : variant === "far" ? "#dc2626"
+                : "#2563eb";
+            const w = variant === "self" ? 32 : variant === "far" ? 28 : 22;
+            const h = variant === "self" ? 44 : variant === "far" ? 40 : 32;
+            const html = `<svg width="${w}" height="${h}" viewBox="0 0 22 32" xmlns="http://www.w3.org/2000/svg">`
+                + `<path d="M11 0 C5 0 0 5 0 11 C0 19 11 32 11 32 C11 32 22 19 22 11 C22 5 17 0 11 0 Z" `
+                + `fill="${color}" stroke="white" stroke-width="1.5"/>`
+                + `<circle cx="11" cy="11" r="4" fill="white"/>`
+                + `</svg>`;
+            return L.divIcon({
+                className: "user-marker-pin " + variant,
+                html,
+                iconSize: [w, h],
+                iconAnchor: [w / 2, h],
+                popupAnchor: [0, -h + 4],
+            });
+        }
+
+        function render() {
+            list.innerHTML = "";
+            clearMarkers();
+
+            const scope = scopeSelect.value;
+            if (currentUsers.length === 0) {
+                list.innerHTML = `<p class='hint'>${emptyMessages[scope]}</p>`;
+                return;
+            }
+
+            const thresholdRaw = thresholdInput.value;
+            const threshold = thresholdRaw === "" ? null : Number(thresholdRaw);
+            const teacherLatLng = teacherUser && teacherUser.location ? {
+                lat: dmsToDecimal(teacherUser.location.Coordinates.Latitude),
+                lng: dmsToDecimal(teacherUser.location.Coordinates.Longitude),
+            } : null;
+
+            const placedPoints = [];
+            let farCount = 0;
+            let withLocationCount = 0;
+
+            if (teacherUser) {
+                const selfItem = document.createElement("div");
+                selfItem.className = "student-item self";
+                selfItem.textContent = teacherUser.name + " (you)";
+                const selfTag = document.createElement("span");
+                selfTag.className = "hint";
+                selfTag.textContent = ` (${teacherUser.class_name})`;
+                selfItem.appendChild(selfTag);
+                if (!teacherLatLng) {
+                    const note = document.createElement("span");
+                    note.className = "hint";
+                    note.textContent = " — no location yet";
+                    selfItem.appendChild(note);
+                }
+                list.appendChild(selfItem);
+
+                if (teacherLatLng) {
+                    selfMarker = L.marker([teacherLatLng.lat, teacherLatLng.lng], {
+                        icon: makeIcon("self"),
+                        zIndexOffset: 1000,
+                    }).addTo(map);
+                    selfMarker.bindPopup(`<b>${teacherUser.name}</b> (you)<br>class ${teacherUser.class_name}`);
+                    placedPoints.push([teacherLatLng.lat, teacherLatLng.lng]);
+
+                    selfItem.style.cursor = "pointer";
+                    selfItem.addEventListener("click", () => {
+                        map.setView([teacherLatLng.lat, teacherLatLng.lng], 14);
+                        selfMarker.openPopup();
+                    });
+                }
+            }
+
+            for (const user of currentUsers) {
+                if (teacherUser && user.user_id === teacherUser.user_id) {
+                    continue;
+                }
+                const item = document.createElement("div");
+                item.className = "student-item";
+                item.textContent = user.name;
+                const classTag = document.createElement("span");
+                classTag.className = "hint";
+                classTag.textContent = ` (${user.class_name})`;
+                item.appendChild(classTag);
+                list.appendChild(item);
+
+                if (!user.location) {
+                    const note = document.createElement("span");
+                    note.className = "hint";
+                    note.textContent = " — no location yet";
+                    item.appendChild(note);
+                    continue;
+                }
+
+                const lat = dmsToDecimal(user.location.Coordinates.Latitude);
+                const lng = dmsToDecimal(user.location.Coordinates.Longitude);
+                withLocationCount++;
+
+                let isFar = false;
+                let distanceKm = null;
+                if (threshold !== null && !Number.isNaN(threshold) && teacherLatLng) {
+                    distanceKm = haversineKm(teacherLatLng.lat, teacherLatLng.lng, lat, lng);
+                    isFar = distanceKm > threshold;
+                }
+
+                if (isFar) {
+                    item.classList.add("far");
+                    farCount++;
+                }
+                if (distanceKm !== null) {
+                    const distTag = document.createElement("span");
+                    distTag.className = "hint distance";
+                    distTag.textContent = ` — ${distanceKm.toFixed(1)} km`;
+                    item.appendChild(distTag);
+                }
+
+                const marker = L.marker([lat, lng], {icon: makeIcon(isFar ? "far" : "near")}).addTo(map);
+                const popup = `<b>${user.name}</b><br>${user.location.Time}`
+                    + (distanceKm !== null ? `<br>${distanceKm.toFixed(1)} km from you` : "");
+                marker.bindPopup(popup);
+                markers[user.user_id] = marker;
+                placedPoints.push([lat, lng]);
+
+                item.style.cursor = "pointer";
+                item.addEventListener("click", () => {
+                    map.setView([lat, lng], 14);
+                    marker.openPopup();
+                });
+            }
+
+            if (placedPoints.length > 0) {
+                map.fitBounds(placedPoints, {padding: [40, 40]});
+            }
+
+            if (threshold === null || Number.isNaN(threshold)) {
+                statusBox.textContent = `${withLocationCount} on map`;
+                statusBox.classList.remove("active");
+            } else if (!teacherLatLng) {
+                statusBox.textContent = "no teacher location";
+                statusBox.classList.remove("active");
+            } else {
+                statusBox.textContent = `${farCount} marked far / ${withLocationCount} on map`;
+                statusBox.classList.toggle("active", farCount > 0);
+            }
+        }
+
+        async function loadUsers() {
+            const scope = scopeSelect.value;
+            const response = await authedFetch("/students?scope=" + scope);
+            if (!response) return;
+            currentUsers = await response.json();
+            render();
+        }
+
+        async function loadTeacher() {
+            const response = await authedFetch("/me");
+            if (!response) return;
+            teacherUser = await response.json();
+        }
+
+        scopeSelect.addEventListener("change", loadUsers);
+        thresholdInput.addEventListener("input", render);
+
+        (async () => {
+            await loadTeacher();
+            await loadUsers();
+        })();
+    </script>
+</body>
+</html>
